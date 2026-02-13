@@ -1,0 +1,53 @@
+- name: Full Nginx Setup
+  hosts: all
+  become: yes
+  vars:
+    dest_path: /etc/nginx/http.d/default.conf
+  
+  tasks:
+    - name: Fix Alpine TLS
+      shell: sed -i 's/https/http/g' /etc/apk/repositories && apk update
+      changed_when: false
+
+    - name: Install Nginx
+      community.general.apk:
+        name: nginx
+        state: present
+      register: nginx_install
+      until: nginx_install is success
+      retries: 3 
+
+    - name: Create static files directory
+      file:
+        path: /var/www/files
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy file for /files
+      copy:
+        content: "<h1>Index of files</h1>"
+        dest: /var/www/files/index.html
+
+    - name: Set custom index page
+      template:
+        src: templates/index.html.j2
+        dest: /var/www/localhost/htdocs/index.html
+      when: "'web_nodes' in group_names"
+
+    - name: Module to set port 8080 (Task 2)
+      nginx_port:
+        port: 8080
+        dest: "{{ dest_path }}"
+      when: "'web_nodes' in group_names"
+      notify: Restart Nginx
+
+    - name: Setup Round Robin (Task 3)
+      template:
+        src: templates/lb.conf.j2
+        dest: "{{ dest_path }}"
+      when: "'balancers' in group_names"
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      shell: mkdir -p /run/nginx && nginx -t && (nginx -s reload || nginx)

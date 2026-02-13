@@ -1,0 +1,15 @@
+upstream myapp {
+    server 172.20.0.11:8080;
+    server 172.20.0.12:8080;
+}
+
+server {
+    listen 80;
+    location / {
+        proxy_pass http://myapp;
+    }
+    location /files {
+        alias /var/www/files/;
+        autoindex on;
+    }
+}
