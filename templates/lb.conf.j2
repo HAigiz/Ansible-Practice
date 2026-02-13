@@ -1,15 +1,15 @@
-upstream myapp {
+upstream nodes {
     server 172.20.0.11:8080;
     server 172.20.0.12:8080;
 }
 
 server {
-    listen 80;
+    listen 8080;
+    
     location / {
-        proxy_pass http://myapp;
-    }
-    location /files {
-        alias /var/www/files/;
-        autoindex on;
+        proxy_pass http://nodes;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }

@@ -1,53 +1,57 @@
-- name: Full Nginx Setup
+---
+- name: Nginx Setup
   hosts: all
   become: yes
-  vars:
-    dest_path: /etc/nginx/http.d/default.conf
-  
+
   tasks:
-    - name: Fix Alpine TLS
-      shell: sed -i 's/https/http/g' /etc/apk/repositories && apk update
-      changed_when: false
+    - name: Install nginx with retries
+      shell: apk add nginx
+      register: result
+      until: result.rc == 0
+      retries: 5
+      delay: 3
 
-    - name: Install Nginx
-      community.general.apk:
-        name: nginx
-        state: present
-      register: nginx_install
-      until: nginx_install is success
-      retries: 3 
-
-    - name: Create static files directory
+    # --- Настройка WEB-серверов (web1, web2) ---
+    - name: Create static directory
       file:
-        path: /var/www/files
-        state: directory
+        path: /var/www/my_files/
+        owner: nginx
+        group: nginx
         mode: '0755'
-
-    - name: Create dummy file for /files
-      copy:
-        content: "<h1>Index of files</h1>"
-        dest: /var/www/files/index.html
-
-    - name: Set custom index page
-      template:
-        src: templates/index.html.j2
-        dest: /var/www/localhost/htdocs/index.html
+        recurse: yes
       when: "'web_nodes' in group_names"
 
-    - name: Module to set port 8080 (Task 2)
-      nginx_port:
-        port: 8080
-        dest: "{{ dest_path }}"
+    - name: Create dummy files
+      file:
+        path: "/var/www/my_files/file{{ item }}.txt"
+        state: touch
+      loop: [1, 2, 3]
+      when: "'web_nodes' in group_names"
+
+    - name: Setup Web Nodes Config
+      template:
+        src: templates/web.conf.j2
+        dest: /etc/nginx/http.d/default.conf
       when: "'web_nodes' in group_names"
       notify: Restart Nginx
 
-    - name: Setup Round Robin (Task 3)
+    # --- Настройка Балансировщика (rrobin) ---
+    - name: Setup Round Robin Config
       template:
         src: templates/lb.conf.j2
-        dest: "{{ dest_path }}"
+        dest: /etc/nginx/http.d/default.conf
       when: "'balancers' in group_names"
       notify: Restart Nginx
 
+    - name: Generate nginx config using custom module
+      nginx_port:
+        port: 8081
+        dest: /etc/nginx/http.d/custom_mod.conf 
+      when: "'balancers' in group_names"       
+      notify: Restart Nginx 
+      
   handlers:
     - name: Restart Nginx
-      shell: mkdir -p /run/nginx && nginx -t && (nginx -s reload || nginx)
+      shell: |
+        mkdir -p /run/nginx
+        nginx -t && (nginx -s reload || nginx)
