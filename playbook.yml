@@ -15,17 +15,17 @@
     - name: Create static directory
       file:
         path: /var/www/my_files/
+        state: directory
         owner: nginx
         group: nginx
         mode: '0755'
         recurse: yes
       when: "'web_nodes' in group_names"
 
-    - name: Create dummy files
-      file:
-        path: "/var/www/my_files/file{{ item }}.txt"
-        state: touch
-      loop: [1, 2, 3]
+    - name: Copy static files
+      copy:
+        src: my_files/
+        dest: /var/www/my_files/
       when: "'web_nodes' in group_names"
 
     - name: Setup Web Nodes Config
