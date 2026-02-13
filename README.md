@@ -22,3 +22,21 @@
     port: 8081
     dest: /etc/nginx/http.d/custom_mod.conf
 ```
+
+
+## Скрины рабочего сайта
+**web1**
+<img width="363" height="68" alt="image" src="https://github.com/user-attachments/assets/ac942afc-e061-474e-afad-ad90acb40a13" />
+
+**web2**
+<img width="337" height="76" alt="image" src="https://github.com/user-attachments/assets/f26e424b-3ed6-45ce-9d97-c4a20bb6dccf" />
+
+**/files**
+<img width="592" height="202" alt="image" src="https://github.com/user-attachments/assets/7f369f83-2a10-4d1c-ba17-68e038f4c177" />
+
+
+# **Запуск**
+1. `git clone https://github.com/HAigiz/Ansible-Practice.git`
+2. `docker compose up --build -d`
+3. `ansible-playbook -i inventory/hosts.ini playbook.yml`
+4. В поисковой строке вводим <адрес_хоста:8080> вас перекинет на один из двух серверов `web1` или `web2` и по пути <адрес_хоста:8080/files> откроется список файл, которые подтягиваются из директории `my_files`
